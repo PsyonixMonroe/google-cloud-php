@@ -22,6 +22,7 @@ use Google\Auth\Cache\MemoryCacheItemPool;
 use Google\Auth\CredentialsLoader;
 use Google\Auth\FetchAuthTokenCache;
 use Google\Auth\FetchAuthTokenInterface;
+use Google\Cloud\Core\Credentials\ImpersonatedServiceAccountCredentialsLoader;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**
@@ -71,6 +72,12 @@ trait RequestWrapperTrait
      *      with the request.
      */
     private $quotaProject;
+
+    /**
+     * @var CredentialsLoader Holder Credentials Loader instances for impersonated service accounts. Lazy initialized
+     *      when the credentials are encountered.
+     */
+    private static $impersonatedCredentialLoaderImp = null;
 
     /**
      * Sets common defaults between request wrappers.
@@ -169,6 +176,11 @@ trait RequestWrapperTrait
                 $this->keyFile['quota_project_id'] = $this->quotaProject;
             }
 
+            if (is_null(self::$impersonatedCredentialLoaderImp) && $this->keyFile['type'] == 'impersonated_service_account')
+            {
+                self::$impersonatedCredentialLoaderImp = new ImpersonatedServiceAccountCredentialsLoader();
+                CredentialsLoader::registerCredentialLoaderExtension(self::$impersonatedCredentialLoaderImp);
+            }
             $fetcher = CredentialsLoader::makeCredentials($this->scopes, $this->keyFile);
         } else {
             try {
